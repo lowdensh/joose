@@ -1,0 +1,13 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+    <link rel="shortcut icon" href="{% static 'img/joosebird.ico' %}" />
+{% endblock %}
+
+{% block branding %}
+    <a href="/admin/">
+        <img src="{% static 'img/joose-logo-bird-outline.svg' %}" height="40" alt="logo">
+        <!-- <h1 id="site-name" style="display: inline-block;">Administration</h1> -->
+    </a>
+{% endblock %}
