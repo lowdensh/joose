@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from products.models import Volume, Strength, Ratio, Flavour, FlavourCategory
+from products.models import Volume, Ratio, Strength, Flavour, FlavourCategory, Product
 
 
 @admin.register(Volume)
@@ -8,13 +8,13 @@ class VolumeAdmin(admin.ModelAdmin):
     pass
 
 
-@admin.register(Strength)
-class StrengthAdmin(admin.ModelAdmin):
+@admin.register(Ratio)
+class RatioAdmin(admin.ModelAdmin):
     pass
 
 
-@admin.register(Ratio)
-class RatioAdmin(admin.ModelAdmin):
+@admin.register(Strength)
+class StrengthAdmin(admin.ModelAdmin):
     pass
 
 
@@ -32,6 +32,78 @@ class FlavourCategoryInline(admin.TabularInline):
 class FlavourAdmin(admin.ModelAdmin):
     # Specific instance
     inlines = [FlavourCategoryInline]
+
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    def vol(self, instance):
+        return instance.volume
+
+    def strs(self, instance):
+        return instance.strength_range
+
+    def flvs(self, instance):
+        return instance.num_flavours
+
+    def salt(self, instance):
+        return instance.is_salt_nic
+    salt.boolean = True
+
+    def vgp(self, instance):
+        return instance.ratio.vgp
+
+    # Main list
+    list_display = ('name', 'brand', 'vol', 'vgp', 'strs', 'flvs', 'salt', 'is_cbd', 'price_string',)
+    list_display_links = ('name',)
+    list_filter = ('brand', 'volume', 'ratio', 'strengths', 'is_salt_nic', 'is_cbd',)
+    search_fields = ('name', 'brand',)
+    ordering = ('name',)
+
+    # Specific CustomUser instance
+    fieldsets = (
+        (_('Product-specific'),
+            {'fields': (
+                'name',
+                'brand',
+                'volume',
+                'ratio',
+                'strengths',
+                'flavours',
+                'is_salt_nic',
+                'is_cbd',
+            )}
+        ),
+        (_('Supplier-specific'),
+            {'fields': (
+                'supplier',
+                'purchase_url',
+                'image_url',
+                'price',
+            )}
+        ),
+    )
+    add_fieldsets = (
+        (_('Product-specific'),
+            {'fields': (
+                'name',
+                'brand',
+                'volume',
+                'ratio',
+                'strengths',
+                'flavours',
+                'is_salt_nic',
+                'is_cbd',
+            )}
+        ),
+        (_('Supplier-specific'),
+            {'fields': (
+                'supplier',
+                'purchase_url',
+                'image_url',
+                'price',
+            )}
+        ),
+    )
 
 
 # class VolumeCategoryListFilter(admin.SimpleListFilter):
