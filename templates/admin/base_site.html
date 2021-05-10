@@ -3,6 +3,17 @@
 
 {% block extrahead %}
     <link rel="shortcut icon" href="{% static 'img/joosebird.ico' %}" />
+    <style>
+        #header,
+        div.breadcrumbs,
+        .module caption,
+        .module h2 {
+            background-color: #202124;
+        }
+        #nav-sidebar .current-model {
+            background-color: #383b5c;
+        }
+    </style>
 {% endblock %}
 
 {% block branding %}

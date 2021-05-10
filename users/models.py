@@ -1,9 +1,10 @@
+# https://testdriven.io/blog/django-custom-user-model/
+
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-
-from .managers import CustomUserManager
+from users.managers import CustomUserManager
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
