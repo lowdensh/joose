@@ -171,7 +171,27 @@ class FlavourCategoryModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             FlavourCategory.objects.create(name='fruit')
     
-    def test_create_categories_with_flavours(self):
+    def test_add_flavour_to_category(self):
+        cat_fruit = FlavourCategory.objects.create(name='fruit')
+        f_apple = Flavour.objects.get(name='apple')
+        cat_fruit.flavours.add(f_apple)
+        self.assertEqual(cat_fruit.flavours.count(), 1)
+        self.assertEqual(f_apple.categories.count(), 1)
+    
+    def test_flavour_exists_in_category(self):
+        """
+        add() will only add objects that aren't there already.
+        Conflicts are ignored, no errors are raised.
+        https://github.com/django/django/blob/main/django/db/models/fields/related_descriptors.py#L1149
+        """
+        cat_fruit = FlavourCategory.objects.create(name='fruit')
+        f_apple = Flavour.objects.get(name='apple')
+        cat_fruit.flavours.add(f_apple)
+        cat_fruit.flavours.add(f_apple)
+        self.assertEqual(cat_fruit.flavours.count(), 1)
+        self.assertEqual(f_apple.categories.count(), 1)
+    
+    def test_add_flavours_to_categories(self):
         # 5 total
         fruit_flavours = Flavour.objects.filter(
             Q(name='apple')
