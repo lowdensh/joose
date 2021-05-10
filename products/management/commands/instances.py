@@ -1,31 +1,56 @@
+"""
+Custom management commands:
+https://docs.djangoproject.com/en/3.2/howto/custom-management-commands/
+https://simpleisbetterthancomplex.com/tutorial/2018/08/27/how-to-create-custom-django-management-commands.html
+"""
+
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from products.models import Volume, Strength, Ratio, FlavourCategory, Flavour
 
 class Command(BaseCommand):
-    help = 'Quickly create some model instances to play with in the shell or admin site.'
+    help = ('Quickly create some model instances for specific apps '
+            'to play with in the shell or admin site.')
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            'app',
-            type=str,
-            help='The app containing the models to create instances of.')
+        parser.add_argument('app', nargs='+', type=str)
 
-    def handle(self, *args, **kwargs):
+        # Named (optional) arguments
+        parser.add_argument(
+            '-d', '--delete',
+            action='store_true',
+            help='Delete model instances instead of creating them.')
+
+    def handle(self, *args, **options):
         supported_apps = ['products']
-        input_app = kwargs['app']
-        if input_app in supported_apps:
-            self.create_for(input_app)
-            self.stdout.write()
-            self.stdout.write('Done.')
-        else:
-            self.stdout.write(self.style.ERROR(
-                f'Unrecognised app: \'{input_app}\''))
+        for app in options['app']:
+            if app not in supported_apps:
+                self.stdout.write(self.style.ERROR(
+                    f'No support for app: \'{app}\''))
+            else:
+                if options['delete']:
+                    self.delete_for(app)
+                else:
+                    self.create_for(app)
+        self.stdout.write()
+        self.stdout.write('Done.')
     
     def create_for(self, app):
         self.stdout.write(self.style.MIGRATE_HEADING(
-            f'Creating model instances for app \'{app}\':'))
+            f'Creating instances for app \'{app}\':'))
         if app == 'products': self.create_for_products()
+    
+    def delete_for(self, app):
+        self.stdout.write(self.style.WARNING(
+            f'Delete instances for app \'{app}\'?'
+            '\nThis deletes ALL instances and cannot be undone.'))
+        choice = input('(y/n): ')
+        if choice.lower() == 'y':
+            self.stdout.write(self.style.MIGRATE_HEADING(
+                f'Deleting instances for app \'{app}\''))
+            if app == 'products': self.delete_for_products()
+        else:
+            self.stdout.write('Delete cancelled.')
     
     def create_for_products(self):
         self.create_products_volume()
@@ -34,6 +59,13 @@ class Command(BaseCommand):
         self.create_products_flavour()
         self.create_products_flavour_category()
         self.manage_products_add_flavours_to_categories()
+    
+    def delete_for_products(self):
+        Volume.objects.all().delete()
+        Strength.objects.all().delete()
+        Ratio.objects.all().delete()
+        Flavour.objects.all().delete()
+        FlavourCategory.objects.all().delete()
     
     def create_products_volume(self):
         self.stdout.write(self.style.MIGRATE_LABEL('  Volume:'))
