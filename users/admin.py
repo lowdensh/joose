@@ -16,11 +16,11 @@ class CustomUserAdmin(UserAdmin):
     list_display_links = ('email',)
     list_filter = ('is_superuser',)
     search_fields = ('email', 'first_name', 'last_name',)
-    ordering = ('-is_superuser', 'email')
+    ordering = ('-is_superuser', '-is_staff', 'last_name', 'first_name',)
 
     # Specific CustomUser instance
     fieldsets = (
-        (_('Personal'), {'fields': ('email', 'password', 'first_name', 'last_name', 'dob',)}),
+        (_('Personal'), {'fields': ('email', 'first_name', 'last_name', 'dob', 'password',)}),
         (_('Dates'), {'fields': ('date_joined', 'last_login',)}),
         (_('Status'), {'fields': ('is_active', 'is_staff', 'is_superuser',)}),
     )
