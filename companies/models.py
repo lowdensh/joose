@@ -19,13 +19,15 @@ class Location(models.TextChoices):
 
 class Brand(models.Model):
     name = models.CharField(
+        verbose_name=_('name'),
         help_text=_('e.g. \'Large Juice\''),
         max_length=50,
         unique=True,
     )
     website = models.URLField(
+        verbose_name=_('website URL'),
         help_text=_('full URL for website homepage'),
-        blank=True,
+        blank=True,  # no nulls, allow empty strings
     )
     
     @property
@@ -39,6 +41,8 @@ class Brand(models.Model):
     
     class Meta:
         ordering = ['name']
+        verbose_name=_('brand')
+        verbose_name_plural = _('brands')
         constraints = [
             models.CheckConstraint(
                 name='%(app_label)s_%(class)s_name_not_blank',
@@ -49,15 +53,18 @@ class Brand(models.Model):
 
 class Supplier(models.Model):
     name = models.CharField(
+        verbose_name=_('name'),
         help_text=_('e.g. \'Vape Club\''),
         max_length=50,
         unique=True,
     )
     website = models.URLField(
+        verbose_name=_('website URL'),
         help_text=_('full URL for website homepage'),
-        blank=True,
+        blank=True,  # no nulls, allow empty strings
     )
     location = models.CharField(
+        verbose_name=_('location'),
         help_text=_('where the supplier ships products from'),
         max_length=3,
         choices=Location.choices,
@@ -74,6 +81,8 @@ class Supplier(models.Model):
         return self.name
     
     class Meta:
+        verbose_name=_('supplier')
+        verbose_name_plural = _('suppliers')
         ordering = ['name']
         constraints = [
             models.CheckConstraint(

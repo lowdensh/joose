@@ -109,6 +109,15 @@ class CustomUserModelTest(TestCase):
                 dob = '1990-01-01',
             )
     
+    def test_last_name_is_none(self):
+        with self.assertRaises(IntegrityError):
+            CustomUser.objects.create(
+                email = 'user@email.com',
+                first_name = 'First',
+                last_name = None,  # no nulls, allow empty strings
+                dob = '1990-01-01',
+            )
+    
     def test_last_name_above_max_chars(self):
         with self.assertRaises(DataError):
             CustomUser.objects.create(

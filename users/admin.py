@@ -20,12 +20,45 @@ class CustomUserAdmin(UserAdmin):
 
     # Specific CustomUser instance
     fieldsets = (
-        (_('Personal'), {'fields': ('email', 'first_name', 'last_name', 'dob', 'password',)}),
-        (_('Dates'), {'fields': ('date_joined', 'last_login',)}),
-        (_('Status'), {'fields': ('is_active', 'is_staff', 'is_superuser',)}),
+        (_('Personal'), 
+            {'fields': (
+                'email',
+                'first_name',
+                'last_name',
+                'dob',
+                'password',
+            )}
+        ),
+        (_('Dates'),
+            {'fields': (
+                'date_joined',
+                'last_login',
+            )}
+        ),
+        (_('Status'),
+            {'fields': (
+                'is_active',
+                'is_staff',
+                'is_superuser',
+            )}
+        ),
     )
     add_fieldsets = (
-        (_('Personal'), {'fields': ('email', 'first_name', 'last_name', 'dob', 'password1', 'password2',)}),
-        (_('Status'), {'fields': ('is_staff', 'is_superuser',)}),
+        (_('Personal'),
+            {'fields': (
+                'email',
+                'first_name',
+                'last_name',
+                'dob',
+                'password1',
+                'password2',
+            )}
+        ),
+        (_('Status'),
+            {'fields': (
+                'is_staff',
+                'is_superuser',
+            )}
+        ),
     )
     readonly_fields = ['date_joined', 'last_login',]

@@ -35,6 +35,13 @@ class BrandModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             Brand.objects.create(name = 'Large Juice')
     
+    def test_website_is_none(self):
+        with self.assertRaises(IntegrityError):
+            Brand.objects.create(
+                name = 'Large Juice',
+                website = None,  # no nulls, allow empty strings
+            )
+    
     def test_website_above_max_chars(self):
         with self.assertRaises(DataError):
             Brand.objects.create(
@@ -92,6 +99,14 @@ class SupplierModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             Supplier.objects.create(
                 name = 'Vape Club',
+                location = Location.GBR,
+            )
+    
+    def test_website_is_none(self):
+        with self.assertRaises(IntegrityError):
+            Supplier.objects.create(
+                name = 'Vape Club',
+                website = None,  # no nulls, allow empty strings
                 location = Location.GBR,
             )
     

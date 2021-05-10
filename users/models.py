@@ -11,39 +11,39 @@ from users.managers import CustomUserManager
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     # Personal
     email = models.EmailField(
-        _('email address'),
+        verbose_name=_('email address'),
         unique=True,
     )
     first_name = models.CharField(
-        _('first name'),
+        verbose_name=_('first name'),
         max_length=30,
     )
     last_name = models.CharField(
-        _('last name'),
+        verbose_name=_('last name'),
         max_length=30,
-        blank=True,
+        blank=True,  # no nulls, allow empty strings
     )
     dob = models.DateField(
-        _('date of birth'),
+        verbose_name=_('date of birth'),
         help_text=_('YYYY-MM-DD e.g. 1990-01-30'),
         default='1990-01-01',
     )
 
     # Automatic
     date_joined = models.DateTimeField(
-        _('date joined'),
+        verbose_name=_('date joined'),
         auto_now_add=True,
     )
     is_active = models.BooleanField(
-        _('active'),
+        verbose_name=_('active'),
         default=True,
     )
     is_staff = models.BooleanField(
-        _('staff'),
+        verbose_name=_('staff'),
         default=False,
     )
     is_superuser = models.BooleanField(
-        _('super'),
+        verbose_name=_('super'),
         default=False,
     )
 
@@ -56,6 +56,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return f'{self.email} ({self.first_name})'
     
     class Meta:
+        verbose_name = _('custom user')
+        verbose_name_plural = _('custom users')
         ordering = ['-is_superuser', '-is_staff', 'last_name', 'first_name',]
         constraints = [
             models.CheckConstraint(
