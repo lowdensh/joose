@@ -144,7 +144,8 @@ class FlavourCategoryModelTest(TestCase):
             'raspberry',
             'menthol',
             'spearmint',
-            'peppermint']
+            'peppermint'
+        ]
         for f in flavours:
             Flavour.objects.create(name=f)
     

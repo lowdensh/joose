@@ -16,7 +16,8 @@ class Volume(models.Model):
     volume = models.PositiveSmallIntegerField(
         help_text=_('ml'),
         unique=True,
-        validators=[MinValueValidator(10)])
+        validators=[MinValueValidator(10)],
+    )
     
     @property
     def ml(self):
@@ -39,7 +40,8 @@ class Strength(models.Model):
     strength = models.PositiveSmallIntegerField(
         help_text=_('mg'),
         unique=True,
-        validators=[MinValueValidator(0)])
+        validators=[MinValueValidator(0)],
+    )
     
     @property
     def mg(self):
@@ -56,6 +58,7 @@ class Strength(models.Model):
             return '0%'
         else:
             return f'{self.strength/10}%'
+    percentage.fget.short_description = '%'
 
     def __str__(self):
         return self.mg
@@ -77,12 +80,13 @@ class Ratio(models.Model):
         unique=True,
         validators=[
             MinValueValidator(0),
-            MaxValueValidator(100)])
+            MaxValueValidator(100)
+        ],
+    )
     
     @property
     def pg(self):
         return 100 - self.vg
-    # pg.fget.short_description = 'PG'
     
     @property
     def vgp(self):
@@ -113,7 +117,8 @@ class Flavour(models.Model):
     name = models.CharField(
         help_text=_('e.g. \'banana\''),
         max_length=50,
-        unique=True)
+        unique=True,
+    )
 
     def __str__(self):
         return self.name
@@ -132,11 +137,13 @@ class FlavourCategory(models.Model):
     name = models.CharField(
         help_text=_('e.g. \'fruit\''),
         max_length=50,
-        unique=True)
+        unique=True,
+    )
     flavours = models.ManyToManyField(
         to=Flavour,
         related_name='categories',
-        blank=True)
+        blank=True,
+    )
 
     @property
     def num_flavours(self):

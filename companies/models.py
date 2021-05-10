@@ -21,10 +21,12 @@ class Brand(models.Model):
     name = models.CharField(
         help_text=_('e.g. \'Large Juice\''),
         max_length=50,
-        unique=True)
+        unique=True,
+    )
     website = models.URLField(
         help_text=_('full URL for website homepage'),
-        blank=True)
+        blank=True,
+    )
     
     @property
     def has_website(self):
@@ -49,15 +51,18 @@ class Supplier(models.Model):
     name = models.CharField(
         help_text=_('e.g. \'Vape Club\''),
         max_length=50,
-        unique=True)
+        unique=True,
+    )
     website = models.URLField(
         help_text=_('full URL for website homepage'),
-        blank=True)
+        blank=True,
+    )
     location = models.CharField(
         help_text=_('where the supplier ships products from'),
         max_length=3,
         choices=Location.choices,
-        default=Location.GBR)
+        default=Location.GBR,
+    )
     
     @property
     def has_website(self):
