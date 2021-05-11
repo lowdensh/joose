@@ -290,4 +290,8 @@ class Product(models.Model):
                 name='%(app_label)s_%(class)s_price_min',
                 check=models.Q(price__gte=0)
             ),
+            models.UniqueConstraint(
+                name='%(app_label)s_%(class)s_name_supplier_unique_together',
+                fields=['name', 'supplier'],
+            ),
         ]

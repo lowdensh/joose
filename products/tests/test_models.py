@@ -492,3 +492,26 @@ class ProductModelTest(TestCase):
                 image_url = 'img.com',
                 price = -1,
             )
+    
+    def test_name_supplier_unique_together(self):
+        p = Product.objects.create(
+            name = 'Kiwimelon Nic Salt E-Liquid',
+            brand = Brand.objects.get(name='Large Juice'),
+            volume = Volume.objects.get(volume=10),
+            ratio = Ratio.objects.get(vg=50),
+            supplier = Supplier.objects.get(name='Vape Club'),
+            purchase_url = 'web.com',
+            image_url = 'img.com',
+            price = 3.99,
+        )
+        with self.assertRaises(IntegrityError):
+            Product.objects.create(
+                name = 'Kiwimelon Nic Salt E-Liquid',
+                brand = Brand.objects.get(name='Large Juice'),
+                volume = Volume.objects.get(volume=10),
+                ratio = Ratio.objects.get(vg=50),
+                supplier = Supplier.objects.get(name='Vape Club'),
+                purchase_url = 'web.com',
+                image_url = 'img.com',
+                price = 3.99,
+            )

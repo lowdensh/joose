@@ -18,14 +18,18 @@ class StrengthAdmin(admin.ModelAdmin):
     pass
 
 
+class FlavourCategoryInline(admin.TabularInline):
+    model = Flavour.categories.through
+
+
 @admin.register(FlavourCategory)
 class FlavourCategoryAdmin(admin.ModelAdmin):
     # List of instances
     list_display = ('name', 'num_flavours',)
 
-
-class FlavourCategoryInline(admin.TabularInline):
-    model = Flavour.categories.through
+    # Specific instance
+    exclude = ('flavours',)
+    inlines = [FlavourCategoryInline]
 
 
 @admin.register(Flavour)
@@ -53,7 +57,7 @@ class ProductAdmin(admin.ModelAdmin):
         return instance.ratio.vgp
 
     # Main list
-    list_display = ('name', 'brand', 'vol', 'vgp', 'strs', 'flvs', 'salt', 'is_cbd', 'price_string',)
+    list_display = ('name', 'brand', 'vol', 'vgp', 'strs', 'flvs', 'salt', 'is_cbd',)
     list_display_links = ('name',)
     list_filter = ('brand', 'volume', 'ratio', 'strengths', 'is_salt_nic', 'is_cbd',)
     search_fields = ('name', 'brand',)
