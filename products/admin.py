@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from products.models import Volume, Ratio, Strength, Flavour, FlavourCategory, Product
+from products.models import Volume, Ratio, Strength, Flavour, FlavourCategory, Product, ProductVariant, SupplierInfo
 
 
 @admin.register(Volume)
@@ -34,80 +34,65 @@ class FlavourCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Flavour)
 class FlavourAdmin(admin.ModelAdmin):
+    # List of instances
+    list_display = ('name', 'num_products',)
+
     # Specific instance
     inlines = [FlavourCategoryInline]
 
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    def flvs(self, instance):
+        return instance.num_flavours
+
+    # Main list
+    list_display = ('name', 'brand', 'flvs',)
+    list_display_links = ('name',)
+    list_filter = ('brand', 'flavours__categories',)
+    search_fields = ('name', 'brand',)
+    ordering = ('name', 'brand',)
+
+
+
+@admin.register(ProductVariant)
+class ProductVariantAdmin(admin.ModelAdmin):
     def vol(self, instance):
         return instance.volume
 
+    def vgp(self, instance):
+        return instance.ratio.vgp
+
     def strs(self, instance):
         return instance.strength_range
-
-    def flvs(self, instance):
-        return instance.num_flavours
 
     def salt(self, instance):
         return instance.is_salt_nic
     salt.boolean = True
 
-    def vgp(self, instance):
-        return instance.ratio.vgp
+    def cbd(self, instance):
+        return instance.is_cbd
+    cbd.boolean = True
 
     # Main list
-    list_display = ('name', 'brand', 'vol', 'vgp', 'strs', 'flvs', 'salt', 'is_cbd',)
-    list_display_links = ('name',)
-    list_filter = ('brand', 'volume', 'ratio', 'strengths', 'is_salt_nic', 'is_cbd',)
-    search_fields = ('name', 'brand',)
-    ordering = ('name',)
+    list_display = ('product', 'vol', 'vgp', 'strs', 'salt', 'cbd',)
+    list_display_links = ('product',)
+    list_filter = (
+        'product__brand',
+        'volume',
+        'ratio',
+        'strengths',
+        'is_salt_nic',
+        'is_cbd',
+        'product__flavours__categories',
+    )
+    search_fields = ('product', 'product__flavours',)
+    ordering = ('product', 'volume', 'ratio',)
 
-    # Specific CustomUser instance
-    fieldsets = (
-        (_('Product-specific'),
-            {'fields': (
-                'name',
-                'brand',
-                'volume',
-                'ratio',
-                'strengths',
-                'flavours',
-                'is_salt_nic',
-                'is_cbd',
-            )}
-        ),
-        (_('Supplier-specific'),
-            {'fields': (
-                'supplier',
-                'purchase_url',
-                'image_url',
-                'price',
-            )}
-        ),
-    )
-    add_fieldsets = (
-        (_('Product-specific'),
-            {'fields': (
-                'name',
-                'brand',
-                'volume',
-                'ratio',
-                'strengths',
-                'flavours',
-                'is_salt_nic',
-                'is_cbd',
-            )}
-        ),
-        (_('Supplier-specific'),
-            {'fields': (
-                'supplier',
-                'purchase_url',
-                'image_url',
-                'price',
-            )}
-        ),
-    )
+
+@admin.register(SupplierInfo)
+class SupplierInfoAdmin(admin.ModelAdmin):
+    pass
 
 
 # class VolumeCategoryListFilter(admin.SimpleListFilter):

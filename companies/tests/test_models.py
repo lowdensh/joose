@@ -13,10 +13,10 @@ class BrandModelTest(TestCase):
     def test_create_brand_with_website(self):
         b = Brand.objects.create(
             name = 'Large Juice',
-            website = 'http://largejuice.com/',
+            website = 'web.com',
         )
         self.assertEqual(b.name, 'Large Juice')
-        self.assertEqual(b.website, 'http://largejuice.com/')
+        self.assertEqual(b.website, 'web.com')
     
     def test_name_is_none(self):
         with self.assertRaises(IntegrityError):
@@ -54,60 +54,34 @@ class SupplierModelTest(TestCase):
     def test_create_supplier(self):
         s = Supplier.objects.create(
             name = 'Vape Club',
-            location = Location.GBR,
+            website = 'web.com',
         )
         self.assertEqual(s.name, 'Vape Club')
-        self.assertEqual(s.website, '')
-        self.assertEqual(s.location, Location.GBR)
-        
-    def test_create_supplier_with_website(self):
-        s = Supplier.objects.create(
-            name = 'Vape Club',
-            website = 'https://www.vapeclub.co.uk/',
-            location = Location.GBR,
-        )
-        self.assertEqual(s.name, 'Vape Club')
-        self.assertEqual(s.website, 'https://www.vapeclub.co.uk/')
+        self.assertEqual(s.website, 'web.com')
         self.assertEqual(s.location, Location.GBR)
     
     def test_name_is_none(self):
         with self.assertRaises(IntegrityError):
-            Supplier.objects.create(
-                name = None,
-                location = Location.GBR,
-            )
+            Supplier.objects.create(name=None)
     
     def test_name_is_blank(self):
         with self.assertRaises(IntegrityError):
-            Supplier.objects.create(
-                name = '',
-                location = Location.GBR,
-            )
+            Supplier.objects.create(name='')
     
     def test_name_above_max_chars(self):
         with self.assertRaises(DataError):
-            Supplier.objects.create(
-                name = 'n'*51,
-                location = Location.GBR,
-            )
+            Supplier.objects.create(name='n'*51)
     
     def test_name_not_unique(self):
-        s = Supplier.objects.create(
-            name = 'Vape Club',
-            location = Location.GBR,
-        )
+        s = Supplier.objects.create(name='Vape Club')
         with self.assertRaises(IntegrityError):
-            Supplier.objects.create(
-                name = 'Vape Club',
-                location = Location.GBR,
-            )
+            Supplier.objects.create(name='Vape Club')
     
     def test_website_is_none(self):
         with self.assertRaises(IntegrityError):
             Supplier.objects.create(
                 name = 'Vape Club',
                 website = None,  # no nulls, allow empty strings
-                location = Location.GBR,
             )
     
     def test_website_above_max_chars(self):
@@ -115,7 +89,6 @@ class SupplierModelTest(TestCase):
             Supplier.objects.create(
                 name = 'Vape Club',
                 website = 'w'*201,
-                location = Location.GBR,
             )
     
     def test_location_is_none(self):

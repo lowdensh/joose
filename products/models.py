@@ -29,7 +29,7 @@ class Volume(models.Model):
         return f'{self.volume}ml'
 
     def __str__(self):
-        return f'{self.ml}'
+        return self.ml
 
     class Meta:
         verbose_name = _('volume')
@@ -67,6 +67,10 @@ class Ratio(models.Model):
         return f'{self.pg}% PG'
 
     @property
+    def short(self):
+        return f'{self.vg}/{self.pg}'
+
+    @property
     def full(self):
         return f'{self.vgp} / {self.pgp}'
 
@@ -86,6 +90,7 @@ class Ratio(models.Model):
 
 
 class Strength(models.Model):
+    """Describes the amount of nicotine or CBD. Products do not mix both."""
     strength = models.PositiveSmallIntegerField(
         verbose_name=_('strength'),
         help_text=_('mg'),
@@ -133,6 +138,10 @@ class Flavour(models.Model):
         unique=True,
     )
 
+    @property
+    def num_products(self):
+        return self.products.count()
+
     def __str__(self):
         return self.name
     
@@ -170,7 +179,7 @@ class FlavourCategory(models.Model):
         return self.name
     
     class Meta:
-        verbose_name=_('flavour category'),
+        verbose_name = _('flavour category'),
         verbose_name_plural = _('flavour categories')
         ordering = ['name']
         constraints = [
@@ -182,7 +191,6 @@ class FlavourCategory(models.Model):
 
 
 class Product(models.Model):
-    # Product-specific
     name = models.CharField(
         verbose_name=_('name'),
         max_length=100,
@@ -193,27 +201,74 @@ class Product(models.Model):
         related_name='products',
         on_delete=models.CASCADE,
     )
+    flavours = models.ManyToManyField(
+        to=Flavour,
+        verbose_name=_('flavours'),
+        related_name='products',
+    )
+
+    @property
+    def num_flavours(self):
+        return self.flavours.count()
+
+    def __str__(self):
+        return f'{self.name} by {self.brand}'
+    
+    class Meta:
+        verbose_name=_('product')
+        verbose_name_plural = _('products')
+        ordering = ['name', 'brand']
+        constraints = [
+            models.CheckConstraint(
+                name='%(app_label)s_%(class)s_name_not_blank',
+                check=~models.Q(name='')
+            ),
+            models.UniqueConstraint(
+                name='%(app_label)s_%(class)s_name_brand_unique_together',
+                fields=['name', 'brand'],
+            ),
+        ]
+
+
+class ProductVariant(models.Model):
+    """
+    Ratios:
+    Popular products are sometimes produced with different ratios. This is not
+    common for e-liquids, most tend to be available in one ratio only.
+
+    Shortfills (volume and strengths):
+    Some products are available as shortfills, which have volumes greater than
+    10ml (usually 50ml+) but no nicotine (0mg strength, legal requirement).
+
+    Strengths:
+    Most products are available with a variety of strengths. Typical ranges:
+    0mg (shortfill, nicotine free)
+    3mg - 18mg (nicotine)
+    5mg - 20mg (nicotine)
+    100mg+ (CBD only, nicotine free)
+    """
+    product = models.ForeignKey(
+        to=Product,
+        verbose_name=_('product'),
+        related_name='variants',
+        on_delete=models.CASCADE,
+    )
     volume = models.ForeignKey(
         to=Volume,
         verbose_name=_('volume'),
-        related_name='products',
+        related_name='product_variants',
         on_delete=models.CASCADE,
     )
     ratio = models.ForeignKey(
         to=Ratio,
         verbose_name=_('ratio'),
-        related_name='products',
+        related_name='product_variants',
         on_delete=models.CASCADE,
     )
     strengths = models.ManyToManyField(
         to=Strength,
         verbose_name=_('strengths'),
-        related_name='products',
-    )
-    flavours = models.ManyToManyField(
-        to=Flavour,
-        verbose_name=_('flavours'),
-        related_name='products',
+        related_name='product_variants',
     )
     is_salt_nic = models.BooleanField(
         verbose_name=_('salt nicotine'),
@@ -221,14 +276,65 @@ class Product(models.Model):
     )
     is_cbd = models.BooleanField(
         verbose_name=_('CBD'),
+        help_text=_('cannabidiol'),
         default=False,
     )
 
-    # Supplier-specific
+    @property
+    def strength_min(self):
+        return self.strengths.order_by('strength').first()
+
+    @property
+    def strength_max(self):
+        return self.strengths.order_by('strength').last()
+    
+    @property
+    def strength_range(self):
+        if self.strengths.count() == 0:
+            return 'No strengths'
+        if self.strengths.count() == 1:
+            return f'{self.strength_min}'
+        return f'{self.strength_min} - {self.strength_max}'
+    
+    @property
+    def detail_string(self):
+        string = f'{self.volume}, {self.ratio}, {self.strength_range}'
+        if self.is_salt_nic:
+            string += ', ' + _('salt nicotine')
+        if self.is_cbd:
+            string += ', ' + _('CBD')
+        return string
+    
+    @property
+    def product_detail_string(self):
+        return f'{self.product} ({self.detail_string})'
+
+    def __str__(self):
+        return self.product_detail_string
+    
+    class Meta:
+        verbose_name=_('product variant')
+        verbose_name_plural = _('product variants')
+        ordering = ['product', 'volume', 'ratio', ]
+        constraints = [
+            models.UniqueConstraint(
+                name='%(app_label)s_%(class)s_prod_vol_rat_salt_unique_together',
+                fields=['product', 'volume', 'ratio', 'is_salt_nic', ],
+            ),
+        ]
+
+
+class SupplierInfo(models.Model):
+    product_variant = models.ForeignKey(
+        to=ProductVariant,
+        verbose_name=_('product variant'),
+        related_name='supplier_infos',
+        on_delete=models.CASCADE,
+    )
     supplier = models.ForeignKey(
         to=Supplier,
         verbose_name=_('supplier'),
-        related_name='products',
+        related_name='supplier_infos',
         on_delete=models.CASCADE,
     )
     purchase_url = models.URLField(
@@ -243,45 +349,38 @@ class Product(models.Model):
     price = models.DecimalField(
         verbose_name=_('price'),
         help_text=_('GBP (£)'),
-        max_digits=5,      # validation only
-        decimal_places=2,  # validation only
-        blank=True,
-        null=True,
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
         validators=[MinValueValidator(0.00)],
     )
-
-    @property
-    def strength_min(self):
-        return self.strengths.order_by('strength').first()
-
-    @property
-    def strength_max(self):
-        return self.strengths.order_by('strength').last()
-    
-    @property
-    def strength_range(self):
-        return f'{self.strength_min} - {self.strength_max}'
-
-    @property
-    def num_flavours(self):
-        return self.flavours.count()
+    rating = models.DecimalField(
+        verbose_name=_('rating'),
+        help_text=_('product rating by users on supplier website'),
+        max_digits=3,
+        decimal_places=2,
+        default=0.00,
+        validators=[MinValueValidator(0.00)],
+    )
+    num_ratings = models.PositiveSmallIntegerField(
+        verbose_name=_('number of ratings'),
+        help_text=_('number of product ratings by users on supplier website'),
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
     
     @property
     def price_string(self):
         return f'£{self.price:.2f}'
 
     def __str__(self):
-        return self.name
+        return f'{self.product_variant} sold by {self.supplier}'
     
     class Meta:
-        verbose_name=_('product')
-        verbose_name_plural = _('products')
-        ordering = ['name']
+        verbose_name=_('supplier info')
+        verbose_name_plural = _('supplier infos')
+        ordering = ['supplier', 'product_variant',]
         constraints = [
-            models.CheckConstraint(
-                name='%(app_label)s_%(class)s_name_not_blank',
-                check=~models.Q(name='')
-            ),
             models.CheckConstraint(
                 name='%(app_label)s_%(class)s_purchase_url_not_blank',
                 check=~models.Q(purchase_url='')
@@ -290,8 +389,16 @@ class Product(models.Model):
                 name='%(app_label)s_%(class)s_price_min',
                 check=models.Q(price__gte=0)
             ),
+            models.CheckConstraint(
+                name='%(app_label)s_%(class)s_rating_min',
+                check=models.Q(rating__gte=0)
+            ),
+            models.CheckConstraint(
+                name='%(app_label)s_%(class)s_num_ratings_min',
+                check=models.Q(num_ratings__gte=0)
+            ),
             models.UniqueConstraint(
-                name='%(app_label)s_%(class)s_name_supplier_unique_together',
-                fields=['name', 'supplier'],
+                name='%(app_label)s_%(class)s_var_supp_unique_together',
+                fields=['product_variant', 'supplier'],
             ),
         ]

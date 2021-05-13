@@ -13,18 +13,14 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db.utils import DataError, IntegrityError
 from django.test import TestCase
-from products.models import Volume, Ratio, Strength, FlavourCategory, Flavour, Product
+from products.models import Volume, Ratio, Strength, FlavourCategory, Flavour, Product, ProductVariant, SupplierInfo
 from companies.models import Location, Brand, Supplier
 
 
 class VolumeModelTest(TestCase):
-    def test_create_volume_10ml(self):
+    def test_create_volume(self):
         v = Volume.objects.create(volume=10)
         self.assertEqual(v.volume, 10)
-
-    def test_create_volume_shortfill(self):
-        v = Volume.objects.create(volume=50)
-        self.assertEqual(v.volume, 50)
     
     def test_volume_is_none(self):
         with self.assertRaises(IntegrityError):
@@ -183,8 +179,8 @@ class FlavourCategoryModelTest(TestCase):
     
     def test_flavour_exists_in_category(self):
         """
-        add() will only add objects that aren't there already.
-        Conflicts are ignored, no errors are raised.
+        add() on ManyToManyField will only add objects that aren't there
+        already. Conflicts are ignored, no errors are raised.
         https://github.com/django/django/blob/main/django/db/models/fields/related_descriptors.py#L1149
         """
         cat_fruit = FlavourCategory.objects.create(name='fruit')
@@ -238,280 +234,428 @@ class FlavourCategoryModelTest(TestCase):
 
 class ProductModelTest(TestCase):
     @classmethod
-    def setUpTestData(clw):
-        Brand.objects.create(name = 'Large Juice')
-        Volume.objects.create(volume=10)
-        Ratio.objects.create(vg=50)
-        for s in [5, 10, 20]:
-            Strength.objects.create(strength=s)
-        flavour_category = FlavourCategory.objects.create(name='fruit')
-        for f in ['dragon fruit', 'kiwi', 'lychee', 'melon']:
-            new = Flavour.objects.create(name=f)
-            flavour_category.flavours.add(new)
-        Supplier.objects.create(
-            name = 'Vape Club',
-            website = 'https://www.vapeclub.co.uk/',
-            location = Location.GBR,
-        )
+    def setUpTestData(cls):
+        Brand.objects.create(name = 'Dinner Lady')
+        for f in ['lemon', 'pastry']:
+            Flavour.objects.create(name=f)
     
     def test_create_product(self):
         p = Product.objects.create(
-            name = 'Kiwimelon Nic Salt E-Liquid',
-            brand = Brand.objects.get(name='Large Juice'),
-            volume = Volume.objects.get(volume=10),
-            ratio = Ratio.objects.get(vg=50),
-            is_salt_nic = True,
-            supplier = Supplier.objects.get(name='Vape Club'),
-            purchase_url = 'web.com',
-            image_url = 'img.com',
-            price = 3.99,
+            name = 'Lemon Tart',
+            brand = Brand.objects.get(name='Dinner Lady'),
         )
-        for s in [5, 10, 20]:
-            p.strengths.add(Strength.objects.get(strength=s))
-        for f in ['dragon fruit', 'kiwi', 'lychee', 'melon']:
+        for f in ['lemon', 'pastry']:
             p.flavours.add(Flavour.objects.get(name=f))
-        self.assertEqual(p.name, 'Kiwimelon Nic Salt E-Liquid')
-        self.assertEqual(p.brand.name, 'Large Juice')
-        self.assertEqual(p.volume.volume, 10)
-        self.assertEqual(p.ratio.vg, 50)
-        self.assertEqual(p.strengths.count(), 3)
-        self.assertEqual(p.flavours.count(), 4)
-        self.assertTrue(p.is_salt_nic)
-        self.assertFalse(p.is_cbd)
-        self.assertEqual(p.supplier.name, 'Vape Club')
-        self.assertEqual(p.purchase_url, 'web.com')
-        self.assertEqual(p.image_url, 'img.com')
-        self.assertEqual(p.price, 3.99)
+        self.assertEqual(p.name, 'Lemon Tart')
+        self.assertEqual(p.brand.name, 'Dinner Lady')
+        self.assertEqual(p.flavours.count(), 2)
     
     def test_name_is_none(self):
         with self.assertRaises(IntegrityError):
             Product.objects.create(
                 name = None,
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
-                purchase_url = 'web.com',
-                image_url = 'img.com',
-                price = 3.99,
+                brand = Brand.objects.get(name='Dinner Lady'),
             )
     
     def test_name_is_blank(self):
         with self.assertRaises(IntegrityError):
             Product.objects.create(
                 name = '',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
-                purchase_url = 'web.com',
-                image_url = 'img.com',
-                price = 3.99,
+                brand = Brand.objects.get(name='Dinner Lady'),
             )
     
     def test_name_above_max_chars(self):
         with self.assertRaises(DataError):
             Product.objects.create(
                 name = 'n'*101,
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
-                purchase_url = 'web.com',
-                image_url = 'img.com',
-                price = 3.99,
+                brand = Brand.objects.get(name='Dinner Lady'),
+            )
+    
+    def test_name_brand_not_unique_together(self):
+        p = Product.objects.create(
+            name = 'Lemon Tart',
+            brand = Brand.objects.get(name='Dinner Lady'),
+        )
+        with self.assertRaises(IntegrityError):
+            Product.objects.create(
+                name = 'Lemon Tart',
+                brand = Brand.objects.get(name='Dinner Lady'),
             )
     
     def test_brand_is_none(self):
         with self.assertRaises(IntegrityError):
             Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
+                name = 'Lemon Tart',
                 brand = None,
+            )
+
+
+class ProductVariantModelTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        p = Product.objects.create(
+            name = 'Lemon Tart',
+            brand = Brand.objects.create(name='Dinner Lady'),
+        )
+        for f in ['lemon', 'pastry']:
+            p.flavours.add(Flavour.objects.create(name=f))
+        Volume.objects.create(volume=10)
+        Volume.objects.create(volume=50)
+        Ratio.objects.create(vg=50)
+        Ratio.objects.create(vg=70)
+        for s in [0, 3, 6, 10, 12, 18, 20]:
+            Strength.objects.create(strength=s)
+    
+    def setUp(self):
+        self.product = Product.objects.get(
+            name = 'Lemon Tart',
+            brand__name = 'Dinner Lady',
+        )
+    
+    def test_create_product_variant(self):
+        pv = ProductVariant.objects.create(
+            product = self.product,
+            volume = Volume.objects.get(volume=10),
+            ratio = Ratio.objects.get(vg=50),
+        )
+        for s in [3, 6, 12, 18]:
+            pv.strengths.add(Strength.objects.get(strength=s))
+        self.assertEqual(pv.product.name, 'Lemon Tart')
+        self.assertEqual(pv.product.brand.name, 'Dinner Lady')
+        self.assertEqual(pv.volume.volume, 10)
+        self.assertEqual(pv.ratio.vg, 50)
+        self.assertEqual(pv.strengths.count(), 4)
+        self.assertFalse(pv.is_salt_nic)
+        self.assertFalse(pv.is_cbd)
+    
+    def test_create_multiple_variants(self):
+        # 50/50 ratio
+        pv_50 = ProductVariant.objects.create(
+            product = self.product,
+            volume = Volume.objects.get(volume=10),
+            ratio = Ratio.objects.get(vg=50),
+        )
+        for s in [3, 6, 12, 18]:
+            pv_50.strengths.add(Strength.objects.get(strength=s))
+
+        # 70/30 ratio
+        pv_70 = ProductVariant.objects.create(
+            product = self.product,
+            volume = Volume.objects.get(volume=10),
+            ratio = Ratio.objects.get(vg=70),
+        )
+        for s in [3, 6]:
+            pv_70.strengths.add(Strength.objects.get(strength=s))
+
+        # Nicotine salt
+        pv_salt = ProductVariant.objects.create(
+            product = self.product,
+            volume = Volume.objects.get(volume=10),
+            ratio = Ratio.objects.get(vg=50),
+            is_salt_nic = True,  # False by default
+        )
+        for s in [10, 20]:
+            pv_salt.strengths.add(Strength.objects.get(strength=s))
+
+        # Shortfill
+        pv_short = ProductVariant.objects.create(
+            product = self.product,
+            volume = Volume.objects.get(volume=50),
+            ratio = Ratio.objects.get(vg=70),
+        )
+        for s in [0]:
+            pv_short.strengths.add(Strength.objects.get(strength=s))
+
+        self.assertEqual(self.product.variants.count(), 4)
+        
+        self.assertEqual(pv_50.volume.volume, 10)
+        self.assertEqual(pv_50.ratio.vg, 50)
+        self.assertEqual(pv_50.strengths.count(), 4)
+        self.assertFalse(pv_50.is_salt_nic)
+        
+        self.assertEqual(pv_70.volume.volume, 10)
+        self.assertEqual(pv_70.ratio.vg, 70)
+        self.assertEqual(pv_70.strengths.count(), 2)
+        self.assertFalse(pv_70.is_salt_nic)
+        
+        self.assertEqual(pv_salt.volume.volume, 10)
+        self.assertEqual(pv_salt.ratio.vg, 50)
+        self.assertEqual(pv_salt.strengths.count(), 2)
+        self.assertTrue(pv_salt.is_salt_nic)
+        
+        self.assertEqual(pv_short.volume.volume, 50)
+        self.assertEqual(pv_short.ratio.vg, 70)
+        self.assertEqual(pv_short.strengths.count(), 1)
+        self.assertFalse(pv_short.is_salt_nic)
+    
+    def test_product_is_none(self):
+        with self.assertRaises(IntegrityError):
+            ProductVariant.objects.create(
+                product = None,
                 volume = Volume.objects.get(volume=10),
                 ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
-                purchase_url = 'web.com',
-                image_url = 'img.com',
-                price = 3.99,
             )
     
     def test_volume_is_none(self):
         with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
+            ProductVariant.objects.create(
+                product = self.product,
                 volume = None,
                 ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
-                purchase_url = 'web.com',
-                image_url = 'img.com',
-                price = 3.99,
             )
     
     def test_ratio_is_none(self):
         with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
+            ProductVariant.objects.create(
+                product = self.product,
                 volume = Volume.objects.get(volume=10),
                 ratio = None,
-                supplier = Supplier.objects.get(name='Vape Club'),
-                purchase_url = 'web.com',
-                image_url = 'img.com',
-                price = 3.99,
             )
     
-    def test_salt_nic_is_none(self):
+    def test_salt_is_none(self):
         with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
+            ProductVariant.objects.create(
+                product = self.product,
                 volume = Volume.objects.get(volume=10),
                 ratio = Ratio.objects.get(vg=50),
                 is_salt_nic = None,
-                supplier = Supplier.objects.get(name='Vape Club'),
-                purchase_url = 'web.com',
-                image_url = 'img.com',
-                price = 3.99,
             )
     
     def test_cbd_is_none(self):
         with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
+            ProductVariant.objects.create(
+                product = self.product,
                 volume = Volume.objects.get(volume=10),
                 ratio = Ratio.objects.get(vg=50),
                 is_cbd = None,
-                supplier = Supplier.objects.get(name='Vape Club'),
+            )
+    
+    def test_prod_vol_rat_salt_not_unique_together(self):
+        pv = ProductVariant.objects.create(
+            product = self.product,
+            volume = Volume.objects.get(volume=10),
+            ratio = Ratio.objects.get(vg=50),
+        )
+        with self.assertRaises(IntegrityError):
+            ProductVariant.objects.create(
+                product = self.product,
+                volume = Volume.objects.get(volume=10),
+                ratio = Ratio.objects.get(vg=50),
+            )
+
+
+class SupplierInfoModelTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Product
+        p = Product.objects.create(
+            name = 'Lemon Tart',
+            brand = Brand.objects.create(name='Dinner Lady'),
+        )
+        for f in ['lemon', 'pastry']:
+            p.flavours.add(Flavour.objects.create(name=f))
+
+        # Variants
+        Volume.objects.create(volume=10)
+        Ratio.objects.create(vg=50)
+        for s in [3, 6, 10, 12, 18, 20]:
+            Strength.objects.create(strength=s)
+
+        # 50/50 ratio
+        pv_50 = ProductVariant.objects.create(
+            product = p,
+            volume = Volume.objects.get(volume=10),
+            ratio = Ratio.objects.get(vg=50),
+        )
+        for s in [3, 6, 12, 18]:
+            pv_50.strengths.add(Strength.objects.get(strength=s))
+
+        # Nicotine salt
+        pv_salt = ProductVariant.objects.create(
+            product = p,
+            volume = Volume.objects.get(volume=10),
+            ratio = Ratio.objects.get(vg=50),
+            is_salt_nic = True,  # False by default
+        )
+        for s in [10, 20]:
+            pv_salt.strengths.add(Strength.objects.get(strength=s))
+        
+        # Suppliers
+        Supplier.objects.create(
+            name = 'Vape Club',
+            website = 'web.com',
+        )
+        Supplier.objects.create(
+            name = 'Vape Superstore',
+            website = 'web.com',
+        )
+    
+    def setUp(self):
+        self.pv_50 = ProductVariant.objects.get(
+            product__name = 'Lemon Tart',
+            product__brand__name = 'Dinner Lady',
+            volume__volume = 10,
+            ratio__vg = 50,
+            is_salt_nic = False,
+        )
+        self.pv_salt = ProductVariant.objects.get(
+            product__name = 'Lemon Tart',
+            product__brand__name = 'Dinner Lady',
+            volume__volume = 10,
+            ratio__vg = 50,
+            is_salt_nic = True,
+        )
+        self.supp_club = Supplier.objects.get(name='Vape Club')
+        self.supp_store = Supplier.objects.get(name='Vape Superstore')
+    
+    def test_create_supplier_info(self):
+        si = SupplierInfo.objects.create(
+            product_variant = self.pv_50,
+            supplier = self.supp_club,
+            purchase_url = 'web.com',
+            image_url = 'img.com',
+            price = 3.99,
+            rating = 4,
+            num_ratings = 73,
+        )
+        self.assertEquals(si.product_variant.product.name, 'Lemon Tart')
+        self.assertEquals(si.product_variant.product.brand.name, 'Dinner Lady')
+        self.assertEquals(si.product_variant.volume.volume, 10)
+        self.assertEquals(si.product_variant.ratio.vg, 50)
+        self.assertEquals(si.product_variant.is_salt_nic, False)
+        self.assertEquals(si.supplier.name, 'Vape Club')
+        self.assertEquals(si.purchase_url, 'web.com')
+        self.assertEquals(si.image_url, 'img.com')
+        self.assertEquals(si.price, 3.99)
+        self.assertEquals(si.rating, 4)
+        self.assertEquals(si.num_ratings, 73)
+    
+    def test_create_multiple_supplier_infos(self):
+        si_club = SupplierInfo.objects.create(
+            product_variant = self.pv_50,
+            supplier = self.supp_club,
+            purchase_url = 'web.com',
+            image_url = 'img.com',
+            price = 3.99,
+            rating = 4,
+            num_ratings = 73,
+        )
+        si_store = SupplierInfo.objects.create(
+            product_variant = self.pv_50,
+            supplier = self.supp_store,
+            purchase_url = 'web.com',
+            image_url = 'img.com',
+            price = 3.95,
+        )
+
+        self.assertEquals(si_club.product_variant, si_store.product_variant)
+        self.assertEquals(self.pv_50.supplier_infos.count(), 2)
+        self.assertEquals(self.pv_salt.supplier_infos.count(), 0)
+    
+    def test_product_variant_is_none(self):
+        with self.assertRaises(IntegrityError):
+            SupplierInfo.objects.create(
+                product_variant = None,
+                supplier = self.supp_club,
                 purchase_url = 'web.com',
                 image_url = 'img.com',
                 price = 3.99,
+                rating = 4,
+                num_ratings = 73,
             )
     
     def test_supplier_is_none(self):
         with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
+            SupplierInfo.objects.create(
+                product_variant = self.pv_50,
                 supplier = None,
                 purchase_url = 'web.com',
                 image_url = 'img.com',
                 price = 3.99,
+                rating = 4,
+                num_ratings = 73,
             )
     
     def test_purchase_url_is_none(self):
         with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
+            SupplierInfo.objects.create(
+                product_variant = self.pv_50,
+                supplier = self.supp_club,
                 purchase_url = None,
                 image_url = 'img.com',
                 price = 3.99,
+                rating = 4,
+                num_ratings = 73,
             )
     
     def test_purchase_url_is_blank(self):
         with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
+            SupplierInfo.objects.create(
+                product_variant = self.pv_50,
+                supplier = self.supp_club,
                 purchase_url = '',
                 image_url = 'img.com',
                 price = 3.99,
+                rating = 4,
+                num_ratings = 73,
             )
     
     def test_purchase_url_above_max_chars(self):
         with self.assertRaises(DataError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
-                purchase_url = 'u'*201,
+            SupplierInfo.objects.create(
+                product_variant = self.pv_50,
+                supplier = self.supp_club,
+                purchase_url = 'w'*201,
                 image_url = 'img.com',
                 price = 3.99,
+                rating = 4,
+                num_ratings = 73,
             )
     
     def test_image_url_is_none(self):
         with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
+            SupplierInfo.objects.create(
+                product_variant = self.pv_50,
+                supplier = self.supp_club,
                 purchase_url = 'web.com',
-                image_url = None,
+                image_url = None,  # no nulls, allow empty strings
                 price = 3.99,
+                rating = 4,
+                num_ratings = 73,
             )
     
     def test_image_url_above_max_chars(self):
         with self.assertRaises(DataError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
+            SupplierInfo.objects.create(
+                product_variant = self.pv_50,
+                supplier = self.supp_club,
                 purchase_url = 'web.com',
-                image_url = 'u'*201,
+                image_url = 'i'*201,
                 price = 3.99,
+                rating = 4,
+                num_ratings = 73,
             )
     
     def test_price_not_numeric(self):
         with self.assertRaises(ValidationError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
+            SupplierInfo.objects.create(
+                product_variant = self.pv_50,
+                supplier = self.supp_club,
                 purchase_url = 'web.com',
                 image_url = 'img.com',
                 price = 'p',
+                rating = 4,
+                num_ratings = 73,
             )
     
     def test_price_negative(self):
         with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
+            SupplierInfo.objects.create(
+                product_variant = self.pv_50,
+                supplier = self.supp_club,
                 purchase_url = 'web.com',
                 image_url = 'img.com',
                 price = -1,
-            )
-    
-    def test_name_supplier_unique_together(self):
-        p = Product.objects.create(
-            name = 'Kiwimelon Nic Salt E-Liquid',
-            brand = Brand.objects.get(name='Large Juice'),
-            volume = Volume.objects.get(volume=10),
-            ratio = Ratio.objects.get(vg=50),
-            supplier = Supplier.objects.get(name='Vape Club'),
-            purchase_url = 'web.com',
-            image_url = 'img.com',
-            price = 3.99,
-        )
-        with self.assertRaises(IntegrityError):
-            Product.objects.create(
-                name = 'Kiwimelon Nic Salt E-Liquid',
-                brand = Brand.objects.get(name='Large Juice'),
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
-                supplier = Supplier.objects.get(name='Vape Club'),
-                purchase_url = 'web.com',
-                image_url = 'img.com',
-                price = 3.99,
+                rating = 4,
+                num_ratings = 73,
             )
