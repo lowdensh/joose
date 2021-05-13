@@ -1,16 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from products.models import Volume, Ratio, Strength, Flavour, FlavourCategory, Product, ProductVariant, SupplierInfo
-
-
-@admin.register(Volume)
-class VolumeAdmin(admin.ModelAdmin):
-    pass
-
-
-@admin.register(Ratio)
-class RatioAdmin(admin.ModelAdmin):
-    pass
+from products.models import Strength, Flavour, FlavourCategory, Product, ProductVariant, SupplierInfo
 
 
 @admin.register(Strength)
@@ -57,12 +47,6 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(ProductVariant)
 class ProductVariantAdmin(admin.ModelAdmin):
-    def vol(self, instance):
-        return instance.volume
-
-    def vgp(self, instance):
-        return instance.ratio.vgp
-
     def strs(self, instance):
         return instance.strength_range
 
@@ -75,19 +59,19 @@ class ProductVariantAdmin(admin.ModelAdmin):
     cbd.boolean = True
 
     # Main list
-    list_display = ('product', 'vol', 'vgp', 'strs', 'salt', 'cbd',)
+    list_display = ('product', 'volume_ml', 'vgp', 'strs', 'salt', 'cbd',)
     list_display_links = ('product',)
     list_filter = (
         'product__brand',
         'volume',
-        'ratio',
+        'vg',
         'strengths',
         'is_salt_nic',
         'is_cbd',
         'product__flavours__categories',
     )
     search_fields = ('product', 'product__flavours',)
-    ordering = ('product', 'volume', 'ratio',)
+    ordering = ('product', 'volume', 'vg',)
 
 
 @admin.register(SupplierInfo)

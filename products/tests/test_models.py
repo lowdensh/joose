@@ -13,66 +13,8 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db.utils import DataError, IntegrityError
 from django.test import TestCase
-from products.models import Volume, Ratio, Strength, FlavourCategory, Flavour, Product, ProductVariant, SupplierInfo
+from products.models import Strength, FlavourCategory, Flavour, Product, ProductVariant, SupplierInfo
 from companies.models import Location, Brand, Supplier
-
-
-class VolumeModelTest(TestCase):
-    def test_create_volume(self):
-        v = Volume.objects.create(volume=10)
-        self.assertEqual(v.volume, 10)
-    
-    def test_volume_is_none(self):
-        with self.assertRaises(IntegrityError):
-            Volume.objects.create(volume=None)
-    
-    def test_volume_not_integer(self):
-        with self.assertRaises(ValueError):
-            Volume.objects.create(volume='v')
-    
-    def test_volume_negative(self):
-        with self.assertRaises(DataError):
-            Volume.objects.create(volume=-1)
-    
-    def test_volume_below_min(self):
-        with self.assertRaises(IntegrityError):
-            Volume.objects.create(volume=9)
-    
-    def test_volume_not_unique(self):
-        v = Volume.objects.create(volume=50)
-        with self.assertRaises(IntegrityError):
-            Volume.objects.create(volume=50)
-
-
-class RatioModelTest(TestCase):
-    def test_create_ratio(self):
-        r = Ratio.objects.create(vg=70)
-        self.assertEqual(r.vg, 70)
-        self.assertEqual(r.pg, 30)
-        self.assertEqual(r.vgp, '70% VG')
-        self.assertEqual(r.pgp, '30% PG')
-        self.assertEqual(r.full, '70% VG / 30% PG')
-    
-    def test_vg_is_none(self):
-        with self.assertRaises(IntegrityError):
-            Ratio.objects.create(vg=None)
-    
-    def test_vg_not_integer(self):
-        with self.assertRaises(ValueError):
-            Ratio.objects.create(vg='vg')
-    
-    def test_vg_negative(self):
-        with self.assertRaises(DataError):
-            Ratio.objects.create(vg=-1)
-    
-    def test_vg_above_max(self):
-        with self.assertRaises(IntegrityError):
-            Ratio.objects.create(vg=101)
-    
-    def test_vg_not_unique(self):
-        r = Ratio.objects.create(vg=70)
-        with self.assertRaises(IntegrityError):
-            Ratio.objects.create(vg=70)
 
 
 class StrengthModelTest(TestCase):
@@ -181,7 +123,6 @@ class FlavourCategoryModelTest(TestCase):
         """
         add() on ManyToManyField will only add objects that aren't there
         already. Conflicts are ignored, no errors are raised.
-        https://github.com/django/django/blob/main/django/db/models/fields/related_descriptors.py#L1149
         """
         cat_fruit = FlavourCategory.objects.create(name='fruit')
         f_apple = Flavour.objects.get(name='apple')
@@ -299,10 +240,6 @@ class ProductVariantModelTest(TestCase):
         )
         for f in ['lemon', 'pastry']:
             p.flavours.add(Flavour.objects.create(name=f))
-        Volume.objects.create(volume=10)
-        Volume.objects.create(volume=50)
-        Ratio.objects.create(vg=50)
-        Ratio.objects.create(vg=70)
         for s in [0, 3, 6, 10, 12, 18, 20]:
             Strength.objects.create(strength=s)
     
@@ -315,15 +252,15 @@ class ProductVariantModelTest(TestCase):
     def test_create_product_variant(self):
         pv = ProductVariant.objects.create(
             product = self.product,
-            volume = Volume.objects.get(volume=10),
-            ratio = Ratio.objects.get(vg=50),
+            volume = 10,
+            vg = 50,
         )
         for s in [3, 6, 12, 18]:
             pv.strengths.add(Strength.objects.get(strength=s))
         self.assertEqual(pv.product.name, 'Lemon Tart')
         self.assertEqual(pv.product.brand.name, 'Dinner Lady')
-        self.assertEqual(pv.volume.volume, 10)
-        self.assertEqual(pv.ratio.vg, 50)
+        self.assertEqual(pv.volume, 10)
+        self.assertEqual(pv.vg, 50)
         self.assertEqual(pv.strengths.count(), 4)
         self.assertFalse(pv.is_salt_nic)
         self.assertFalse(pv.is_cbd)
@@ -332,8 +269,8 @@ class ProductVariantModelTest(TestCase):
         # 50/50 ratio
         pv_50 = ProductVariant.objects.create(
             product = self.product,
-            volume = Volume.objects.get(volume=10),
-            ratio = Ratio.objects.get(vg=50),
+            volume = 10,
+            vg = 50,
         )
         for s in [3, 6, 12, 18]:
             pv_50.strengths.add(Strength.objects.get(strength=s))
@@ -341,8 +278,8 @@ class ProductVariantModelTest(TestCase):
         # 70/30 ratio
         pv_70 = ProductVariant.objects.create(
             product = self.product,
-            volume = Volume.objects.get(volume=10),
-            ratio = Ratio.objects.get(vg=70),
+            volume = 10,
+            vg = 70,
         )
         for s in [3, 6]:
             pv_70.strengths.add(Strength.objects.get(strength=s))
@@ -350,8 +287,8 @@ class ProductVariantModelTest(TestCase):
         # Nicotine salt
         pv_salt = ProductVariant.objects.create(
             product = self.product,
-            volume = Volume.objects.get(volume=10),
-            ratio = Ratio.objects.get(vg=50),
+            volume = 10,
+            vg = 50,
             is_salt_nic = True,  # False by default
         )
         for s in [10, 20]:
@@ -360,31 +297,31 @@ class ProductVariantModelTest(TestCase):
         # Shortfill
         pv_short = ProductVariant.objects.create(
             product = self.product,
-            volume = Volume.objects.get(volume=50),
-            ratio = Ratio.objects.get(vg=70),
+            volume = 50,
+            vg = 70,
         )
         for s in [0]:
             pv_short.strengths.add(Strength.objects.get(strength=s))
 
         self.assertEqual(self.product.variants.count(), 4)
         
-        self.assertEqual(pv_50.volume.volume, 10)
-        self.assertEqual(pv_50.ratio.vg, 50)
+        self.assertEqual(pv_50.volume, 10)
+        self.assertEqual(pv_50.vg, 50)
         self.assertEqual(pv_50.strengths.count(), 4)
         self.assertFalse(pv_50.is_salt_nic)
         
-        self.assertEqual(pv_70.volume.volume, 10)
-        self.assertEqual(pv_70.ratio.vg, 70)
+        self.assertEqual(pv_70.volume, 10)
+        self.assertEqual(pv_70.vg, 70)
         self.assertEqual(pv_70.strengths.count(), 2)
         self.assertFalse(pv_70.is_salt_nic)
         
-        self.assertEqual(pv_salt.volume.volume, 10)
-        self.assertEqual(pv_salt.ratio.vg, 50)
+        self.assertEqual(pv_salt.volume, 10)
+        self.assertEqual(pv_salt.vg, 50)
         self.assertEqual(pv_salt.strengths.count(), 2)
         self.assertTrue(pv_salt.is_salt_nic)
         
-        self.assertEqual(pv_short.volume.volume, 50)
-        self.assertEqual(pv_short.ratio.vg, 70)
+        self.assertEqual(pv_short.volume, 50)
+        self.assertEqual(pv_short.vg, 70)
         self.assertEqual(pv_short.strengths.count(), 1)
         self.assertFalse(pv_short.is_salt_nic)
     
@@ -392,8 +329,8 @@ class ProductVariantModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             ProductVariant.objects.create(
                 product = None,
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
+                volume = 10,
+                vg = 50,
             )
     
     def test_volume_is_none(self):
@@ -401,23 +338,71 @@ class ProductVariantModelTest(TestCase):
             ProductVariant.objects.create(
                 product = self.product,
                 volume = None,
-                ratio = Ratio.objects.get(vg=50),
+                vg = 50,
             )
     
-    def test_ratio_is_none(self):
+    def test_volume_not_integer(self):
+        with self.assertRaises(ValueError):
+            ProductVariant.objects.create(
+                product = self.product,
+                volume = 'v',
+                vg = 50,
+            )
+    
+    def test_volume_negative(self):
+        with self.assertRaises(DataError):
+            ProductVariant.objects.create(
+                product = self.product,
+                volume = -1,
+                vg = 50,
+            )
+    
+    def test_volume_below_min(self):
         with self.assertRaises(IntegrityError):
             ProductVariant.objects.create(
                 product = self.product,
-                volume = Volume.objects.get(volume=10),
-                ratio = None,
+                volume = 9,
+                vg = 50,
+            )
+    
+    def test_vg_is_none(self):
+        with self.assertRaises(IntegrityError):
+            ProductVariant.objects.create(
+                product = self.product,
+                volume = 10,
+                vg = None,
+            )
+    
+    def test_vg_not_integer(self):
+        with self.assertRaises(ValueError):
+            ProductVariant.objects.create(
+                product = self.product,
+                volume = 10,
+                vg = 'vg',
+            )
+    
+    def test_vg_negative(self):
+        with self.assertRaises(DataError):
+            ProductVariant.objects.create(
+                product = self.product,
+                volume = 10,
+                vg = -1,
+            )
+    
+    def test_vg_above_max(self):
+        with self.assertRaises(IntegrityError):
+            ProductVariant.objects.create(
+                product = self.product,
+                volume = 10,
+                vg = 101,
             )
     
     def test_salt_is_none(self):
         with self.assertRaises(IntegrityError):
             ProductVariant.objects.create(
                 product = self.product,
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
+                volume = 10,
+                vg = 50,
                 is_salt_nic = None,
             )
     
@@ -425,22 +410,24 @@ class ProductVariantModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             ProductVariant.objects.create(
                 product = self.product,
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
+                volume = 10,
+                vg = 50,
                 is_cbd = None,
             )
     
-    def test_prod_vol_rat_salt_not_unique_together(self):
+    def test_prod_vol_vg_salt_not_unique_together(self):
         pv = ProductVariant.objects.create(
             product = self.product,
-            volume = Volume.objects.get(volume=10),
-            ratio = Ratio.objects.get(vg=50),
+            volume = 10,
+            vg = 50,
+            is_salt_nic = True,
         )
         with self.assertRaises(IntegrityError):
             ProductVariant.objects.create(
                 product = self.product,
-                volume = Volume.objects.get(volume=10),
-                ratio = Ratio.objects.get(vg=50),
+                volume = 10,
+                vg = 50,
+                is_salt_nic = True,
             )
 
 
@@ -456,16 +443,14 @@ class SupplierInfoModelTest(TestCase):
             p.flavours.add(Flavour.objects.create(name=f))
 
         # Variants
-        Volume.objects.create(volume=10)
-        Ratio.objects.create(vg=50)
         for s in [3, 6, 10, 12, 18, 20]:
             Strength.objects.create(strength=s)
 
         # 50/50 ratio
         pv_50 = ProductVariant.objects.create(
             product = p,
-            volume = Volume.objects.get(volume=10),
-            ratio = Ratio.objects.get(vg=50),
+            volume = 10,
+            vg = 50,
         )
         for s in [3, 6, 12, 18]:
             pv_50.strengths.add(Strength.objects.get(strength=s))
@@ -473,8 +458,8 @@ class SupplierInfoModelTest(TestCase):
         # Nicotine salt
         pv_salt = ProductVariant.objects.create(
             product = p,
-            volume = Volume.objects.get(volume=10),
-            ratio = Ratio.objects.get(vg=50),
+            volume = 10,
+            vg = 50,
             is_salt_nic = True,  # False by default
         )
         for s in [10, 20]:
@@ -494,15 +479,15 @@ class SupplierInfoModelTest(TestCase):
         self.pv_50 = ProductVariant.objects.get(
             product__name = 'Lemon Tart',
             product__brand__name = 'Dinner Lady',
-            volume__volume = 10,
-            ratio__vg = 50,
+            volume = 10,
+            vg = 50,
             is_salt_nic = False,
         )
         self.pv_salt = ProductVariant.objects.get(
             product__name = 'Lemon Tart',
             product__brand__name = 'Dinner Lady',
-            volume__volume = 10,
-            ratio__vg = 50,
+            volume = 10,
+            vg = 50,
             is_salt_nic = True,
         )
         self.supp_club = Supplier.objects.get(name='Vape Club')
@@ -520,8 +505,8 @@ class SupplierInfoModelTest(TestCase):
         )
         self.assertEquals(si.product_variant.product.name, 'Lemon Tart')
         self.assertEquals(si.product_variant.product.brand.name, 'Dinner Lady')
-        self.assertEquals(si.product_variant.volume.volume, 10)
-        self.assertEquals(si.product_variant.ratio.vg, 50)
+        self.assertEquals(si.product_variant.volume, 10)
+        self.assertEquals(si.product_variant.vg, 50)
         self.assertEquals(si.product_variant.is_salt_nic, False)
         self.assertEquals(si.supplier.name, 'Vape Club')
         self.assertEquals(si.purchase_url, 'web.com')

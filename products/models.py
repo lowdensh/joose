@@ -16,81 +16,11 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
-class Volume(models.Model):
-    volume = models.PositiveSmallIntegerField(
-        verbose_name=_('volume'),
-        help_text=_('ml'),
-        unique=True,
-        validators=[MinValueValidator(10)],
-    )
-    
-    @property
-    def ml(self):
-        return f'{self.volume}ml'
-
-    def __str__(self):
-        return self.ml
-
-    class Meta:
-        verbose_name = _('volume')
-        verbose_name_plural = _('volumes')
-        ordering = ['volume']
-        constraints = [
-            models.CheckConstraint(
-                name='%(app_label)s_%(class)s_volume_min',
-                check=models.Q(volume__gte=10)
-            ),
-        ]
-
-
-class Ratio(models.Model):
-    vg = models.PositiveSmallIntegerField(
-        verbose_name='VG',
-        help_text=_('%'),
-        unique=True,
-        validators=[
-            MinValueValidator(0),
-            MaxValueValidator(100)
-        ],
-    )
-    
-    @property
-    def pg(self):
-        return 100 - self.vg
-    
-    @property
-    def vgp(self):
-        return f'{self.vg}% VG'
-    
-    @property
-    def pgp(self):
-        return f'{self.pg}% PG'
-
-    @property
-    def short(self):
-        return f'{self.vg}/{self.pg}'
-
-    @property
-    def full(self):
-        return f'{self.vgp} / {self.pgp}'
-
-    def __str__(self):
-        return self.full
-    
-    class Meta:
-        verbose_name=_('ratio')
-        verbose_name_plural = _('ratios')
-        ordering = ['vg']
-        constraints = [
-            models.CheckConstraint(
-                name='%(app_label)s_%(class)s_vg_valid_range',
-                check=(models.Q(vg__gte=0) & models.Q(vg__lte=100))
-            )
-        ]
-
-
 class Strength(models.Model):
-    """Describes the amount of nicotine or CBD. Products do not mix both."""
+    """
+    Describes the amount of nicotine or CBD in a product. These are not mixed.
+    Products are commonly available in a range of strengths.
+    """
     strength = models.PositiveSmallIntegerField(
         verbose_name=_('strength'),
         help_text=_('mg'),
@@ -100,12 +30,12 @@ class Strength(models.Model):
     
     @property
     def mg(self):
-        return f'{self.strength}mg'
+        return f'{self.strength}' + _('mg')
     
     @property
     def mg_ml(self):
-        return f'{self.strength}mg/ml'
-    mg_ml.fget.short_description = 'mg/ml'
+        return f'{self.mg}/' + _('ml')
+    mg_ml.fget.short_description = _('mg/ml')
     
     @property
     def percentage(self):
@@ -232,11 +162,11 @@ class Product(models.Model):
 
 class ProductVariant(models.Model):
     """
-    Ratios:
+    Ratios (VG/PG):
     Popular products are sometimes produced with different ratios. This is not
     common for e-liquids, most tend to be available in one ratio only.
 
-    Shortfills (volume and strengths):
+    Shortfills (volume>10, strength=0):
     Some products are available as shortfills, which have volumes greater than
     10ml (usually 50ml+) but no nicotine (0mg strength, legal requirement).
 
@@ -253,17 +183,20 @@ class ProductVariant(models.Model):
         related_name='variants',
         on_delete=models.CASCADE,
     )
-    volume = models.ForeignKey(
-        to=Volume,
+    volume = models.PositiveSmallIntegerField(
         verbose_name=_('volume'),
-        related_name='product_variants',
-        on_delete=models.CASCADE,
+        help_text=_('ml'),
+        default=10,
+        validators=[MinValueValidator(10)],
     )
-    ratio = models.ForeignKey(
-        to=Ratio,
-        verbose_name=_('ratio'),
-        related_name='product_variants',
-        on_delete=models.CASCADE,
+    vg = models.PositiveSmallIntegerField(
+        verbose_name='VG',
+        help_text=_('%'),
+        default=50,
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(100)
+        ],
     )
     strengths = models.ManyToManyField(
         to=Strength,
@@ -279,6 +212,36 @@ class ProductVariant(models.Model):
         help_text=_('cannabidiol'),
         default=False,
     )
+    
+    @property
+    def volume_ml(self):
+        return f'{self.volume}' + _('ml')
+    volume_ml.fget.short_description = _('ml')
+    
+    @property
+    def pg(self):
+        return 100 - self.vg
+    pg.fget.short_description = 'PG'
+    
+    @property
+    def vgp(self):
+        return f'{self.vg}% VG'
+    vgp.fget.short_description = 'VG%'
+    
+    @property
+    def pgp(self):
+        return f'{self.pg}% PG'
+    pgp.fget.short_description = 'PG%'
+
+    @property
+    def ratio_short(self):
+        return f'{self.vg}/{self.pg}'
+    ratio_short.fget.short_description = _('ratio')
+
+    @property
+    def ratio_full(self):
+        return f'{self.vgp} / {self.pgp}'
+    ratio_full.fget.short_description = _('ratio')
 
     @property
     def strength_min(self):
@@ -295,10 +258,11 @@ class ProductVariant(models.Model):
         if self.strengths.count() == 1:
             return f'{self.strength_min}'
         return f'{self.strength_min} - {self.strength_max}'
+    strength_range.fget.short_description = _('strength range')
     
     @property
     def detail_string(self):
-        string = f'{self.volume}, {self.ratio}, {self.strength_range}'
+        string = f'{self.volume_ml}, {self.ratio_full}, {self.strength_range}'
         if self.is_salt_nic:
             string += ', ' + _('salt nicotine')
         if self.is_cbd:
@@ -315,11 +279,19 @@ class ProductVariant(models.Model):
     class Meta:
         verbose_name=_('product variant')
         verbose_name_plural = _('product variants')
-        ordering = ['product', 'volume', 'ratio', ]
+        ordering = ['product', 'volume', 'vg', ]
         constraints = [
+            models.CheckConstraint(
+                name='%(app_label)s_%(class)s_volume_min',
+                check=models.Q(volume__gte=10)
+            ),
+            models.CheckConstraint(
+                name='%(app_label)s_%(class)s_vg_valid_range',
+                check=(models.Q(vg__gte=0) & models.Q(vg__lte=100))
+            ),
             models.UniqueConstraint(
-                name='%(app_label)s_%(class)s_prod_vol_rat_salt_unique_together',
-                fields=['product', 'volume', 'ratio', 'is_salt_nic', ],
+                name='%(app_label)s_%(class)s_prod_vol_vg_salt_unique_together',
+                fields=['product', 'volume', 'vg', 'is_salt_nic', ],
             ),
         ]
 
