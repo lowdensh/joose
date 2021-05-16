@@ -203,6 +203,10 @@ class ProductVariant(models.Model):
         verbose_name=_('strengths'),
         related_name='product_variants',
     )
+    is_shortfill = models.BooleanField(
+        verbose_name=_('shortfill'),
+        default=False,
+    )
     is_salt_nic = models.BooleanField(
         verbose_name=_('salt nicotine'),
         default=False,

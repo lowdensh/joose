@@ -262,6 +262,7 @@ class ProductVariantModelTest(TestCase):
         self.assertEqual(pv.volume, 10)
         self.assertEqual(pv.vg, 50)
         self.assertEqual(pv.strengths.count(), 4)
+        self.assertFalse(pv.is_shortfill)
         self.assertFalse(pv.is_salt_nic)
         self.assertFalse(pv.is_cbd)
     
@@ -299,6 +300,7 @@ class ProductVariantModelTest(TestCase):
             product = self.product,
             volume = 50,
             vg = 70,
+            is_shortfill = True,  # False by default
         )
         for s in [0]:
             pv_short.strengths.add(Strength.objects.get(strength=s))
@@ -309,21 +311,25 @@ class ProductVariantModelTest(TestCase):
         self.assertEqual(pv_50.vg, 50)
         self.assertEqual(pv_50.strengths.count(), 4)
         self.assertFalse(pv_50.is_salt_nic)
+        self.assertFalse(pv_50.is_shortfill)
         
         self.assertEqual(pv_70.volume, 10)
         self.assertEqual(pv_70.vg, 70)
         self.assertEqual(pv_70.strengths.count(), 2)
         self.assertFalse(pv_70.is_salt_nic)
+        self.assertFalse(pv_70.is_shortfill)
         
         self.assertEqual(pv_salt.volume, 10)
         self.assertEqual(pv_salt.vg, 50)
         self.assertEqual(pv_salt.strengths.count(), 2)
         self.assertTrue(pv_salt.is_salt_nic)
+        self.assertFalse(pv_salt.is_shortfill)
         
         self.assertEqual(pv_short.volume, 50)
         self.assertEqual(pv_short.vg, 70)
         self.assertEqual(pv_short.strengths.count(), 1)
         self.assertFalse(pv_short.is_salt_nic)
+        self.assertTrue(pv_short.is_shortfill)
     
     def test_product_is_none(self):
         with self.assertRaises(IntegrityError):
@@ -395,6 +401,15 @@ class ProductVariantModelTest(TestCase):
                 product = self.product,
                 volume = 10,
                 vg = 101,
+            )
+    
+    def test_shortfill_is_none(self):
+        with self.assertRaises(IntegrityError):
+            ProductVariant.objects.create(
+                product = self.product,
+                volume = 10,
+                vg = 50,
+                is_shortfill = None,
             )
     
     def test_salt_is_none(self):
