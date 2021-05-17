@@ -264,7 +264,6 @@ class ProductVariantModelTest(TestCase):
         self.assertEqual(pv.strengths.count(), 4)
         self.assertFalse(pv.is_shortfill)
         self.assertFalse(pv.is_salt_nic)
-        self.assertFalse(pv.is_cbd)
     
     def test_create_multiple_variants(self):
         # 50/50 ratio
@@ -419,15 +418,6 @@ class ProductVariantModelTest(TestCase):
                 volume = 10,
                 vg = 50,
                 is_salt_nic = None,
-            )
-    
-    def test_cbd_is_none(self):
-        with self.assertRaises(IntegrityError):
-            ProductVariant.objects.create(
-                product = self.product,
-                volume = 10,
-                vg = 50,
-                is_cbd = None,
             )
     
     def test_prod_vol_vg_salt_not_unique_together(self):

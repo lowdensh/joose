@@ -54,20 +54,16 @@ class ProductVariantAdmin(admin.ModelAdmin):
         return instance.is_salt_nic
     salt.boolean = True
 
-    def cbd(self, instance):
-        return instance.is_cbd
-    cbd.boolean = True
-
     # Main list
-    list_display = ('product', 'volume_ml', 'vgp', 'strs', 'salt', 'cbd',)
+    list_display = ('product', 'volume_ml', 'vgp', 'strs', 'salt',)
     list_display_links = ('product',)
     list_filter = (
         'product__brand',
         'volume',
         'vg',
         'strengths',
+        'is_shortfill',
         'is_salt_nic',
-        'is_cbd',
         'product__flavours__categories',
     )
     search_fields = ('product', 'product__flavours',)

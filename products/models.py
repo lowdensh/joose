@@ -18,7 +18,7 @@ from django.utils.translation import gettext_lazy as _
 
 class Strength(models.Model):
     """
-    Describes the amount of nicotine or CBD in a product. These are not mixed.
+    Describes the amount of nicotine in a product.
     Products are commonly available in a range of strengths.
     """
     strength = models.PositiveSmallIntegerField(
@@ -172,10 +172,9 @@ class ProductVariant(models.Model):
 
     Strengths:
     Most products are available with a variety of strengths. Typical ranges:
-    0mg (shortfill, nicotine free)
-    3mg - 18mg (nicotine)
-    5mg - 20mg (nicotine)
-    100mg+ (CBD only, nicotine free)
+    0mg (nicotine free or shortfill)
+    [3, 6, 12, 18]mg (nicotine)
+    [5, 10, 20]mg (nicotine)
     """
     product = models.ForeignKey(
         to=Product,
@@ -209,11 +208,6 @@ class ProductVariant(models.Model):
     )
     is_salt_nic = models.BooleanField(
         verbose_name=_('salt nicotine'),
-        default=False,
-    )
-    is_cbd = models.BooleanField(
-        verbose_name=_('CBD'),
-        help_text=_('cannabidiol'),
         default=False,
     )
     
@@ -267,10 +261,10 @@ class ProductVariant(models.Model):
     @property
     def detail_string(self):
         string = f'{self.volume_ml}, {self.ratio_full}, {self.strength_range}'
+        if self.is_shortfill:
+            string += ', ' + _('shortfill')
         if self.is_salt_nic:
             string += ', ' + _('salt nicotine')
-        if self.is_cbd:
-            string += ', ' + _('CBD')
         return string
     
     @property
