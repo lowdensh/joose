@@ -3,6 +3,9 @@
 */__pycache__/
 *.pyc
 
+media/
+logs/
+
 */management/commands/instances.py
 */management/commands/customusers.py
 */management/commands/resetdb.py

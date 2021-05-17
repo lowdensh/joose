@@ -13,9 +13,9 @@ Environment file
 https://django-environ.readthedocs.io/en/latest/
 """
 
-from pathlib import Path
-
 import environ
+import os
+from   pathlib import Path
 
 
 env = environ.Env(DEBUG=(bool, True))
@@ -142,7 +142,66 @@ STATICFILES_DIRS = [
     # BASE_DIR / 'users/static/users/',
 ]
 
+# Uploaded files
+# https://docs.djangoproject.com/en/3.2/topics/files/
+
+MEDIA_ROOT = BASE_DIR / 'media'
+
+MEDIA_URL = '/media/'
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Logging
+# https://docs.djangoproject.com/en/3.2/topics/logging/
+# https://www.scalyr.com/blog/getting-started-quickly-django-logging
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '%(name)-12s %(levelname)-8s %(message)s'
+        },
+        'file': {
+            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'console',
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': './logs/debug.log',
+        },
+        'scrape': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': './logs/scrape.log',
+        },
+    },
+    'loggers': {
+        'root': {
+            'level': 'DEBUG',
+            'handlers': ['console', 'file'],
+        },
+        'urllib3': {
+            'level': 'WARNING',
+            'handlers': ['file'],
+        },
+        'scrape': {
+            'level': 'INFO',
+            'handlers': ['scrape'],
+            'propagate': False,
+        },
+    },
+}
