@@ -188,6 +188,12 @@ LOGGING = {
             'formatter': 'file',
             'filename': './logs/scrape.log',
         },
+        'csv-create': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': './logs/csv-create.log',
+        },
     },
     'loggers': {
         'root': {
@@ -198,9 +204,18 @@ LOGGING = {
             'level': 'WARNING',
             'handlers': ['file'],
         },
+        'asyncio': {
+            'level': 'WARNING',
+            'handlers': ['file'],
+        },
         'scrape': {
             'level': 'INFO',
             'handlers': ['scrape'],
+            'propagate': False,
+        },
+        'csv-create': {
+            'level': 'INFO',
+            'handlers': ['csv-create'],
             'propagate': False,
         },
     },
